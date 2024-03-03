@@ -1,0 +1,74 @@
+version: '3.8'  # Specifies the version of the Docker Compose file format
+
+services:
+  db:
+    build: ./dbserver  # Path to the Dockerfile for building the db service's image
+    image: u5579496/csvs_dbserver_i  # Name of the image to be built or used
+    container_name: u5579496_csvs_dbserver_c  # Custom name for the running container
+    privileged: true  # Grants extended privileges to this container
+    # When mounting the container initially kindly remove the cgroups, capabilities, and "no-new-privileges" flag in security_opt.
+    ulimits:
+      nofile:
+        soft: 65536 # Soft limit for the number of open files
+        hard: 65536 # Hard limit for the number of open files
+    cap_drop:
+      - ALL  # Drops all Linux capabilities for this container
+    mem_limit: 50m  # Maximum amount of memory this container can use
+    mem_reservation: 20m  # Memory reservation (soft limit) for this container
+    cpus: '0.5'  # Limits this container to 50% of a CPU core
+    pids_limit: 100  # Maximum number of PIDs allowed within the container
+    security_opt:
+      - no-new-privileges:true  # Prevents the container from gaining new privileges
+      - seccomp:default.json  # Applies the default seccomp profile
+      - apparmor=docker-default  # Uses the default AppArmor profile
+    hostname: db.cyber23.test  # Hostname assigned to this container
+    environment:  # Environment variables passed to the container for database authentication
+      MYSQL_ROOT_PASSWORD: CorrectHorseBatteryStaple
+      MYSQL_DATABASE: csvs23db
+      MYSQL_USER: wwwclient23
+      MYSQL_PASSWORD: wwwclient23Creds
+    ports:
+      - "127.0.0.1:3306:3306"  # Maps port 3306 inside the container to port 3306 on the host, accessible only on localhost
+    volumes:
+      - /opt/mnt/dbdata:/var/lib/mysql  # Mounts a host directory to a container path for persistent storage
+    networks:
+      - backend_net  # Connects this service to the specified network
+
+  web:
+    build: ./webserver  # Path to the Dockerfile for the web service's image
+    image: u5579496/csvs_webserver_i  # Name of the image to be built or used
+    container_name: u5579496_csvs_webserver_c  # Custom name for the running container
+    ulimits:
+      nofile:
+        soft: 65536 # Soft limit for the number of open files
+        hard: 65536 # Hard limit for the number of open files
+    environment:  # Environment variables passed to the container for assigning account passwords
+      ROOT_PASSWORD: ANTALisSAFEpassword#
+      ALEXIS_PASSWORD: ALEXisNOTsafePassword123!
+    cap_add:
+      - SETUID  # Adds specific Linux capabilities to this container
+      - SETGID
+      - DAC_OVERRIDE
+      - AUDIT_WRITE
+      - CHOWN
+    cap_drop:
+      - ALL  # Drops all other Linux capabilities
+    mem_limit: 50m  # Maximum amount of memory this container can use
+    mem_reservation: 20m  # Memory reservation (soft limit) for this container
+    cpus: '0.5'  # Limits this container to 50% of a CPU core
+    pids_limit: 100  # Maximum number of PIDs allowed within the container
+    hostname: www.cyber23.test  # Hostname assigned to this container
+    ports:
+      - "127.0.0.1:8080:8004"  # Maps port 8004 inside the container to port 8080 on the host, accessible only on localhost
+    networks:
+      - frontend_net  # Connects this service to the specified network
+      - backend_net  # Also connects this service to another network, allowing interaction with services on that network
+    security_opt:
+      - seccomp:default.json  # Applies the default seccomp profile
+      - apparmor=docker-default  # Uses the default AppArmor profile
+
+networks:
+  frontend_net:
+    driver: bridge  # Defines a network with bridge driver for frontend services
+  backend_net:
+    driver: bridge  # Defines another network with bridge driver for backend services

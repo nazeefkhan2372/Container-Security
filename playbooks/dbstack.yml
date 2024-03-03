@@ -1,0 +1,38 @@
+---
+- name: Automate Docker tasks and manage MariaDB user passwords with Ansible
+  hosts: localhost
+  vars_files:
+    - secrets.yml  # Include a variable file that presumably contains sensitive data like 'db_password'
+
+  tasks:
+    - name: Start Docker containers
+      community.docker.docker_compose:  # Uses the docker_compose module to manage Docker services
+        project_src: /root/Desktop/pma  # The location of the docker-compose project files
+        state: present  # Ensures that the containers are running
+        build: yes  # Builds the images before starting if necessary
+
+    - name: Wait for the database container to start
+      pause:  # Pause the execution of the playbook for a set number of seconds
+        seconds: 10  # The duration of the pause to allow the database container to fully start
+
+    - name: Check if 'suggestion' table exists
+      community.docker.docker_container_exec:  # Executes a command inside a running container
+        container: u5579496_csvs_dbserver_c  # The name of the container to execute the command in
+        command: "mysql -uroot -p\"{{ db_password }}\" -e \"USE csvs23db; SHOW TABLES LIKE 'suggestion';\""  # Command to check if the 'suggestion' table exists in the database
+      register: check_table  # Store the output of this task in the variable 'check_table' for conditional checks later
+
+    - name: Execute SQL script if 'suggestion' table does not exist
+      community.docker.docker_container_exec:  # Executes a command inside a running container
+        container: u5579496_csvs_dbserver_c  # The name of the container to execute the command in
+        command: "mysql -uroot -p\"{{ db_password }}\" csvs23db"  # Command to execute SQL statements in the database
+        stdin: "{{ lookup('file', '../dbserver/sqlconfig/csvs23db.sql') }}"  # Read SQL commands from the specified file and pass it to the stdin of the command
+      when: "'suggestion' not in check_table.stdout"  # Condition to only run this task if the 'suggestion' table does not exist
+
+    - name: Ensure 'root' user's password is set correctly in MariaDB
+      mysql_user:  # Uses the mysql_user module to manage MySQL user accounts
+        login_user: root  # The user to log in as
+        login_password: "{{ db_password }}"  # The password for the user to log in with
+        name: root  # The name of the user to manage
+        password: "{{ db_password }}"  # The desired password for the 'root' user
+        host_all: yes  # Apply password change for 'root' user across all hosts
+      when: "'suggestion' in check_table.stdout or 'suggestion' not in check_table.stdout"  # This condition is redundant as it always evaluates to true; hence this task always runs
