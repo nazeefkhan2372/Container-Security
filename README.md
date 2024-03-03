@@ -15,7 +15,7 @@ Set the path in the playbook to your source folder.
 ##### ![image](https://github.com/nazeefkhan2372/Container-Security/assets/67185628/4a38c2e4-dee7-4059-b8c8-fd4d6c595d12)
 Delete the highlighted values.
 ##### ![image](https://github.com/nazeefkhan2372/Container-Security/assets/67185628/b286ab2d-7a80-4592-a38f-839e4910d53c)
-Also, set the user to root since to mount the database initially requires root permissions.
+Also, we commented `USER MySQL` line to set the user to root since, to mount the database initially requires root permissions.
 ##### ![image](https://github.com/nazeefkhan2372/Container-Security/assets/67185628/a93e73aa-e27d-41fb-9f83-15e5638898aa)
 
 
